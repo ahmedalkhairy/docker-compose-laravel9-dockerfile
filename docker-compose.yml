@@ -1,34 +1,36 @@
-version: "3.7"
-services:
+version: "3.8"
+
+services: 
     db:
         image: mysql:8.0
-        volumes:
+        volumes: 
             - db-data:/var/lib/mysql
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-            MYSQL_PASSWORD: ${DB_PASSWORD}
-            MYSQL_USER: ${DB_USERNAME}
-            SERVICE_TAGS: dev
-            SERVICE_NAME: db
-
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=question_board
 
     app:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        image: ahmedlaravelimage
-        container_name: laravel-app
-        restart: unless-stopped
-        working_dir: /var/www/
-        ports:
-            - 80:80
-            - 443:443
+        build: .
+        entrypoint: /usr/local/bin/docker-php-entrypoint-dev
+        command: ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
         volumes:
-            - ./:/var/www
-        networks:
-            - laravel_app
-
+            - ./src:/var/www/app
+        environment: 
+            - APP_ENV=local
+            - APP_KEY=base64:tLmYfUrrZITzLIkSjFnV+PCAFxkdU+duUxjVSIlrrHo=
+            - APP_DEBUG=true
+            - DB_CONNECTION=mysql
+            - DB_HOST=db ## same as the database service name
+            - DB_PORT=3306
+            - DB_DATABASE=question_board
+            - DB_USERNAME=root
+            - DB_PASSWORD=root
+        restart: unless-stopped
+        ports: 
+            - 8081:80
+            - 8082:443
+        depends_on:
+            - db
     phpmyadmin:
         image: phpmyadmin/phpmyadmin:latest
         container_name: phpmyadmin
@@ -40,20 +42,17 @@ services:
             - PMA_ARBITRARY:1
             - PMA_HOST:mysql
             - MYSQL_USERNAME:root
-            - MYSQL_ROOT_PASSWORD:${DB_PASSWORD}
+            - MYSQL_ROOT_PASSWORD:root
         depends_on:
             - db
-        #        networks:
-        #            # define your network where all containers are connected to each other
-        #            - app-network
-        #        volumes:
-        #            # define directory path where you shall store your persistent data and config
-        #            # files of phpmyadmin
-        #            - ./docker/phpmyadmin
+#        networks:
+#            # define your network where all containers are connected to each other
+#            - app-network
+    #        volumes:
+    #            # define directory path where you shall store your persistent data and config
+    #            # files of phpmyadmin
+    #            - ./docker/phpmyadmin
+    #
 
-
-networks:
-    laravel_app:
-        driver: bridge
 volumes:
     db-data:
